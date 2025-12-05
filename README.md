@@ -1,4 +1,4 @@
-# DNS Venturo - Real-time DNS Monitoring
+# DNS Checker - Real-time DNS Monitoring
 
 A comprehensive real-time DNS monitoring application that continuously checks DNS resolution for specified domains and displays results in a responsive web interface.
 
