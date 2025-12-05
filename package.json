@@ -1,5 +1,5 @@
 {
-  "name": "dns-venturo",
+  "name": "dns-checker",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github-venturo:adi-venturo/dns-venturo.git"
+    "url": "git@github-venturo:adi-venturo/dns-checker.git"
   },
   "keywords": [],
   "author": "",

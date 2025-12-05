@@ -48,7 +48,7 @@ A comprehensive real-time DNS monitoring application that continuously checks DN
 ## 📁 Project Structure
 
 ```
-dns-venturo/
+dns-checker/
 ├── .deployment/
 │   ├── nginx.conf         # Nginx reverse proxy configuration
 │   └── supervisord.conf   # Supervisor process management
@@ -69,7 +69,7 @@ dns-venturo/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd dns-venturo
+   cd dns-checker
    ```
 
 2. **Install dependencies**
@@ -112,19 +112,19 @@ dns-venturo/
 
 1. **Build the Docker image**
    ```bash
-   docker build -t dns-venturo .
+   docker build -t dns-checker .
    ```
 
 2. **Run the container**
    ```bash
    # Basic run
-   docker run -p 80:80 --name dns-monitor dns-venturo
+   docker run -p 80:80 --name dns-monitor dns-checker
 
    # Run with custom domain configuration
    docker run -p 80:80 \
      -v $(pwd)/config/domains.json:/usr/src/app/config/domains.json \
      --name dns-monitor \
-     dns-venturo
+     dns-checker
    ```
 
 3. **Access the application**
@@ -144,7 +144,7 @@ services:
     volumes:
       - ./config/domains.json:/usr/src/app/config/domains.json:ro
     restart: unless-stopped
-    container_name: dns-venturo
+    container_name: dns-checker
 ```
 
 Then run:
@@ -274,7 +274,7 @@ For persistent configuration:
 # Mount custom domain configuration
 docker run -p 80:80 \
   -v /path/to/custom/domains.json:/usr/src/app/config/domains.json:ro \
-  dns-venturo
+  dns-checker
 ```
 
 ## 🔍 Troubleshooting
@@ -285,7 +285,7 @@ docker run -p 80:80 \
 ```bash
 # Clean and rebuild
 docker system prune -f
-docker build --no-cache -t dns-venturo .
+docker build --no-cache -t dns-checker .
 ```
 
 #### Container Won't Start
@@ -311,7 +311,7 @@ netstat -tlnp | grep :80
 
 For debugging, you can run the container with shell access:
 ```bash
-docker run -it -p 80:80 --entrypoint /bin/sh dns-venturo
+docker run -it -p 80:80 --entrypoint /bin/sh dns-checker
 ```
 
 ## 🤝 Contributing

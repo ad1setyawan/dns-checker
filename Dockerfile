@@ -20,10 +20,10 @@ COPY index.html /usr/share/nginx/html/
 
 # Copy deployment configuration files
 COPY .deployment/nginx.conf /etc/nginx/conf.d/default.conf
-COPY .deployment/supervisord.conf /etc/supervisor/conf.d/dns-venturo.conf
+COPY .deployment/supervisord.conf /etc/supervisor/conf.d/dns-checker.conf
 
 # Expose port 80
 EXPOSE 80
 
 # Start supervisor to manage both services
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/dns-venturo.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/dns-checker.conf"]
