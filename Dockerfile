@@ -19,7 +19,7 @@ COPY config/* /app/config/
 RUN npm install || true
 
 # Copy HTML ke Nginx webroot
-COPY index.html /usr/share/nginx/html
+COPY index.html /usr/share/nginx/html/index.html
 
 # Copy config
 COPY .deployment/nginx.conf /etc/nginx/nginx.conf
