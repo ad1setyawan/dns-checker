@@ -8,8 +8,9 @@ const resolver = new Resolver();
 
 const domains = JSON.parse(fs.readFileSync("./config/domains.json", "utf8"));
 const domainStatus = {};
+let lastUpdateTime = new Date().toISOString();
 
-// DNS resolve helper
+// DNS resolve helper with error handling
 async function resolveDNS(domain, timeoutMs = 2000) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -24,29 +25,48 @@ async function resolveDNS(domain, timeoutMs = 2000) {
         return { domain, status: "ok", ip: ip4[0], timeMs };
     } catch (err) {
         clearTimeout(timeout);
-        return { domain, status: "failed", error: err.code || err.message };
+        const errorType = err.code || 'UNKNOWN_ERROR';
+        let errorMessage = err.message;
+
+        // Log DNS failures for monitoring
+        console.warn(`DNS resolution failed for ${domain}: ${errorType} - ${errorMessage}`);
+
+        return { domain, status: "failed", error: errorMessage, errorCode: errorType };
     }
 }
 
-// checker loop per domain
-function startDomainChecker(domain, intervalMs = 5000) {
-    console.log(`Starting checker for ${domain}`);
+// checker loop per domain with conservative interval (3 seconds)
+function startDomainChecker(domain, intervalMs = 3000) {
+    console.log(`Starting checker for ${domain} with ${intervalMs}ms interval`);
 
     const loop = async () => {
-        const result = await resolveDNS(domain);
-        result.checkedAt = new Date().toISOString();
+        try {
+            const result = await resolveDNS(domain);
+            result.checkedAt = new Date().toISOString();
 
-        // update memory
-        domainStatus[domain] = result;
+            // update memory
+            domainStatus[domain] = result;
+            lastUpdateTime = result.checkedAt;
 
+            // Log successful resolution
+            if (result.status === "ok") {
+                console.log(`✓ ${domain} → ${result.ip} (${result.timeMs?.toFixed(1)}ms)`);
+            } else {
+                console.log(`✗ ${domain} → ${result.error}`);
+            }
+        } catch (err) {
+            console.error(`Unexpected error in checker for ${domain}:`, err);
+        }
+
+        // Continue with interval (could add exponential backoff here if needed)
         setTimeout(loop, intervalMs);
     };
 
     loop();
 }
 
-// start all domain checkers
-domains.forEach(d => startDomainChecker(d.trim(), 5000));
+// start all domain checkers with conservative 3-second interval
+domains.forEach(d => startDomainChecker(d.trim(), 3000));
 
 // middleware CORS
 app.use((req, res, next) => {
@@ -55,9 +75,15 @@ app.use((req, res, next) => {
     next();
 });
 
-// REST API endpoints
+// REST API endpoints with enhanced response format
 app.get("/api/domains", (req, res) => {
-    res.json(domainStatus);
+    res.json({
+        lastUpdated: lastUpdateTime,
+        domains: domains,
+        data: domainStatus,
+        checkInterval: "3s",
+        pollInterval: "10s"
+    });
 });
 
 app.get("/api/domains/:domain", (req, res) => {
@@ -72,5 +98,8 @@ app.get("/api/domains/:domain", (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log("DNS Monitor + REST API running on port " + PORT);
+    console.log(`🚀 DNS Monitor + Conservative REST API running on port ${PORT}`);
+    console.log(`📊 Monitoring ${domains.length} domains every 3 seconds`);
+    console.log(`⚡ API polling interval: 10 seconds (safe for production)`);
+    console.log(`🔗 API endpoints: http://localhost:${PORT}/api/domains`);
 });

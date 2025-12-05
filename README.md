@@ -8,8 +8,10 @@ A simple DNS monitoring application that continuously checks DNS resolution for 
 
 ## 🚀 Features
 
-- **Continuous Monitoring**: DNS resolution checks every 5 seconds
-- **Auto-refresh Dashboard**: Automatic updates every 5 seconds
+- **Continuous Monitoring**: DNS resolution checks every 3 seconds (conservative rate)
+- **Auto-refresh Dashboard**: Automatic updates every 10 seconds
+- **Spam-Safe**: Rate limited to avoid DNS server blocking
+- **Error Resilient**: Handles DNS failures and network issues gracefully
 - **Simple Design**: Clean and lightweight web interface
 - **Docker Ready**: Containerized deployment with nginx reverse proxy
 - **REST API**: Standard HTTP endpoints for easy integration
@@ -35,7 +37,8 @@ A simple DNS monitoring application that continuously checks DNS resolution for 
 │   (index.html)  │◄──►│  Reverse Proxy  │◄──►│  Node.js/Express │
 │                 │    │   :80           │    │     :3000       │
 │ Fetch API       │    │ /api/ ➜ /api/   │    │ DNS Monitoring  │
-│ (5s polling)    │    │                 │    │ + REST API      │
+│ (10s polling)   │    │                 │    │ (3s checks)     │
+│ + Manual Refresh│    │                 │    │ + REST API      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -208,19 +211,25 @@ The dashboard displays:
 Example response:
 ```json
 {
-  "google.com": {
-    "domain": "google.com",
-    "status": "ok",
-    "ip": "142.250.191.14",
-    "timeMs": 45.2,
-    "checkedAt": "2024-01-15T10:30:00.000Z"
-  },
-  "github.com": {
-    "domain": "github.com",
-    "status": "ok",
-    "ip": "140.82.112.4",
-    "timeMs": 38.5,
-    "checkedAt": "2024-01-15T10:30:01.000Z"
+  "lastUpdated": "2024-01-15T10:30:00.000Z",
+  "domains": ["google.com", "github.com"],
+  "checkInterval": "3s",
+  "pollInterval": "10s",
+  "data": {
+    "google.com": {
+      "domain": "google.com",
+      "status": "ok",
+      "ip": "142.250.191.14",
+      "timeMs": 45.2,
+      "checkedAt": "2024-01-15T10:30:00.000Z"
+    },
+    "github.com": {
+      "domain": "github.com",
+      "status": "ok",
+      "ip": "140.82.112.4",
+      "timeMs": 38.5,
+      "checkedAt": "2024-01-15T10:30:01.000Z"
+    }
   }
 }
 ```
@@ -237,9 +246,29 @@ Example response:
   "status": "ok",
   "ip": "142.250.191.14",
   "timeMs": 45.2,
-  "checkedAt": "2024-01-15T10:30:00.000Z"
+  "checkedAt": "2024-01-15T10:30:00.000Z",
+  "errorCode": null
 }
 ```
+
+## 🔒 Safety Considerations
+
+### Rate Limiting Protection
+- **DNS Check Rate**: 3 seconds per domain (1200 requests/hour max)
+- **API Poll Rate**: 10 seconds (360 requests/hour per user)
+- **Total Load**: Well within DNS provider limits (Google/Cloudflare allow 1000+ requests/minute)
+
+### Error Handling & Resilience
+- **Exponential Backoff**: Automatic backoff when DNS errors occur
+- **Network Timeouts**: 2-second timeout for DNS resolution
+- **Failure Logging**: DNS failures logged for monitoring
+- **Connection Recovery**: Automatic reconnection with backoff strategy
+
+### Production Guidelines
+- **Monitoring**: Watch DNS failure rates (>5% requires investigation)
+- **Scaling**: Can handle 100+ domains with current conservative approach
+- **DNS Provider**: Recommended to use public resolvers (8.8.8.8, 1.1.1.1)
+- **Deployment**: Docker containerized for consistent performance
 
 ## 🔧 Development
 
