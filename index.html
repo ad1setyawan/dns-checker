@@ -31,17 +31,16 @@
         <thead>
             <tr>
                 <th>Domain</th>
+                <th>Last Checked</th>
                 <th>Status</th>
                 <th>IP / Error</th>
-                <th>Time</th>
-                <th>Latency</th>
             </tr>
         </thead>
         <tbody id="table-body"></tbody>
     </table>
 
     <script>
-        const SERVER_URL = "";  // Using nginx proxy on same domain
+        const SERVER_URL = "http://localhost:3000";  // Using nginx proxy on same domain
         const tableBody = document.getElementById("table-body");
         const rows = {};
 
@@ -73,11 +72,10 @@
             rows[data.domain] = tr;
 
             tr.innerHTML = `
-            <td>${data.domain}</td>
+            <td>${data.domain} (${formatLatency(data.timeMs)})</td>
+            <td>${formatClientTime(data.checkedAt)}</td>
             <td>${data.status.toUpperCase()}</td>
             <td>${data.ip || data.error || "-"}</td>
-            <td>${formatClientTime(data.checkedAt)}</td>
-            <td>${formatLatency(data.timeMs)}</td>
         `;
 
             if (!tr.parentNode) {
