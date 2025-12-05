@@ -2,6 +2,7 @@ import express from "express";
 import { Resolver } from "dns/promises";
 import fs from "fs";
 
+const PORT = 3000;
 const app = express();
 const resolver = new Resolver();
 
@@ -90,6 +91,6 @@ app.get("/stream", (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log("DNS Monitor + SSE running on port 3000");
+app.listen(PORT, () => {
+    console.log("DNS Monitor + SSE running on port " + PORT);
 });
