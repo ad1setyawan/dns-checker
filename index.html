@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DNS Monitor Realtime</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #fafafa;
+            font-weight: bold;
+        }
+
+        .status-ok {
+            color: #0f8b2c;
+            font-weight: bold;
+        }
+
+        .status-failed {
+            color: #c91414;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>DNS Monitor (Realtime)</h1>
+    <p>Data di-streaming dari server secara realtime.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Domain</th>
+                <th>Status</th>
+                <th>IP / Error</th>
+                <th>Waktu Cek</th>
+                <th>Latency</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
+    <script>
+        const SERVER_URL = "";  // Using nginx proxy on same domain
+        const tableBody = document.getElementById("table-body");
+        const rows = {};
+
+        function updateRow(data) {
+            if (!data.domain) return;
+
+            const tr = rows[data.domain] || document.createElement("tr");
+            rows[data.domain] = tr;
+
+            tr.innerHTML = `
+            <td>${data.domain}</td>
+            <td class="${data.status === "ok" ? "status-ok" : "status-failed"}">
+                ${data.status.toUpperCase()}
+            </td>
+            <td>${data.ip || data.error || "-"}</td>
+            <td>${data.checkedAt || "-"}</td>
+            <td>${data.timeMs ? data.timeMs + " ms" : "-"}</td>
+        `;
+
+            if (!tr.parentNode) {
+                tableBody.appendChild(tr);
+            }
+        }
+
+        // Connect ke SSE pakai full URL dengan API prefix
+        const es = new EventSource(`${SERVER_URL}/stream`);
+
+        es.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.connected) return;
+            updateRow(data);
+        };
+
+        es.onerror = () => {
+            console.log("SSE disconnected. Auto-reconnect by browser...");
+        };
+    </script>
+
+</body>
+
+</html>
