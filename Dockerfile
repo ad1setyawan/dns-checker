@@ -11,6 +11,10 @@ WORKDIR /app
 COPY server.js /app/server.js
 COPY package*.json /app/
 
+# Copy config files
+RUN mkdir -p /app/config
+COPY config/* /app/config/
+
 # Install Node dependencies (jika tidak ada, tetap aman)
 RUN npm install || true
 
