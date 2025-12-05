@@ -1,6 +1,6 @@
-# DNS Checker - Real-time DNS Monitoring
+# DNS Checker - Simple DNS Monitoring
 
-A comprehensive real-time DNS monitoring application that continuously checks DNS resolution for specified domains and displays results in a responsive web interface.
+A simple DNS monitoring application that continuously checks DNS resolution for specified domains and displays results in a clean web interface with auto-refresh every 5 seconds.
 
 ![DNS Monitoring](https://img.shields.io/badge/Status-Active-green.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
@@ -8,10 +8,11 @@ A comprehensive real-time DNS monitoring application that continuously checks DN
 
 ## 🚀 Features
 
-- **Real-time Monitoring**: Continuous DNS resolution checks every 5 seconds
-- **Live Dashboard**: Real-time updates using Server-Sent Events (SSE)
-- **Responsive Design**: Clean and modern web interface
+- **Continuous Monitoring**: DNS resolution checks every 5 seconds
+- **Auto-refresh Dashboard**: Automatic updates every 5 seconds
+- **Simple Design**: Clean and lightweight web interface
 - **Docker Ready**: Containerized deployment with nginx reverse proxy
+- **REST API**: Standard HTTP endpoints for easy integration
 - **Lightweight**: Minimal dependencies and fast startup
 - **Configurable**: Easy domain list management via JSON configuration
 
@@ -33,16 +34,17 @@ A comprehensive real-time DNS monitoring application that continuously checks DN
 │   Frontend      │    │     Nginx       │    │   Backend       │
 │   (index.html)  │◄──►│  Reverse Proxy  │◄──►│  Node.js/Express │
 │                 │    │   :80           │    │     :3000       │
-│ EventSource API │    │ /stream ➜ /stream│    │ DNS Monitoring  │
+│ Fetch API       │    │ /api/ ➜ /api/   │    │ DNS Monitoring  │
+│ (5s polling)    │    │                 │    │ + REST API      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### Components
 
-- **Frontend**: Vanilla HTML/CSS/JavaScript with EventSource API
+- **Frontend**: Vanilla HTML/CSS/JavaScript with Fetch API polling
 - **Backend**: Node.js with Express.js framework
 - **DNS Engine**: Native Node.js DNS Promises API
-- **Real-time**: Server-Sent Events (SSE) for live updates
+- **API**: REST endpoints for DNS status
 - **Proxy**: Nginx for serving static content and API routing
 
 ## 📁 Project Structure
@@ -198,12 +200,37 @@ The dashboard displays:
 
 ### API Endpoints
 
-#### Server-Sent Events (SSE)
-- **Endpoint**: `/stream` (via nginx) or `/results/stream` (direct)
+#### Get All Domain Status
+- **Endpoint**: `/api/domains`
 - **Method**: GET
-- **Purpose**: Real-time DNS monitoring data stream
+- **Purpose**: Get status of all monitored domains
 
-Example SSE response:
+Example response:
+```json
+{
+  "google.com": {
+    "domain": "google.com",
+    "status": "ok",
+    "ip": "142.250.191.14",
+    "timeMs": 45.2,
+    "checkedAt": "2024-01-15T10:30:00.000Z"
+  },
+  "github.com": {
+    "domain": "github.com",
+    "status": "ok",
+    "ip": "140.82.112.4",
+    "timeMs": 38.5,
+    "checkedAt": "2024-01-15T10:30:01.000Z"
+  }
+}
+```
+
+#### Get Specific Domain Status
+- **Endpoint**: `/api/domains/{domain}`
+- **Method**: GET
+- **Purpose**: Get status of a specific domain
+
+Example response:
 ```json
 {
   "domain": "google.com",
@@ -233,14 +260,14 @@ npm test  # Will show "Error: no test specified"
 
 #### Backend (`server.js`)
 - **DNS Resolution**: Uses `dns/promises` API with timeout handling
-- **SSE Broadcasting**: Real-time data streaming to connected clients
+- **REST API**: HTTP endpoints for DNS status data
 - **Express Server**: HTTP server with CORS support
 - **Monitoring Loops**: Async loops for each domain
 
 #### Frontend (`index.html`)
-- **EventSource API**: Connects to SSE endpoint for live updates
-- **Dynamic DOM**: Real-time table updates
-- **Auto-reconnection**: Handles connection drops gracefully
+- **Fetch API**: Polls REST API every 5 seconds
+- **Dynamic DOM**: Updates table with latest data
+- **Auto-refresh**: Automatic polling with error handling
 
 ### Adding New Features
 
@@ -297,10 +324,11 @@ docker logs dns-monitor
 netstat -tlnp | grep :80
 ```
 
-#### SSE Connection Issues
-- Check if nginx is properly proxying `/stream` endpoint
+#### API Connection Issues
+- Check if nginx is properly proxying `/api/` endpoints
 - Verify Node.js backend is running on port 3000
-- Check browser console for connection errors
+- Check browser console for fetch API errors
+- Check network tab in browser developer tools
 
 #### DNS Resolution Failures
 - Verify domain names in `config/domains.json`

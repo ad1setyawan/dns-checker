@@ -49,8 +49,8 @@
 
 <body>
 
-    <h1>DNS Monitor (Realtime)</h1>
-    <p>Data di-streaming dari server secara realtime.</p>
+    <h1>DNS Monitor</h1>
+    <p>Auto-refresh: <strong style="color: #0f8b2c;">ON</strong> (setiap 5 detik)</p>
 
     <table>
         <thead>
@@ -91,18 +91,23 @@
             }
         }
 
-        // Connect ke SSE pakai full URL dengan API prefix
-        const es = new EventSource(`${SERVER_URL}/stream`);
+        // Poll DNS status every 5 seconds
+        function pollDNSStatus() {
+            fetch(`${SERVER_URL}/api/domains`)
+                .then(response => response.json())
+                .then(data => {
+                    Object.values(data).forEach(updateRow);
+                })
+                .catch(error => {
+                    console.error("Polling error:", error);
+                });
+        }
 
-        es.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.connected) return;
-            updateRow(data);
-        };
+        // Initial poll
+        pollDNSStatus();
 
-        es.onerror = () => {
-            console.log("SSE disconnected. Auto-reconnect by browser...");
-        };
+        // Set up polling interval
+        const pollInterval = setInterval(pollDNSStatus, 5000);
     </script>
 
 </body>

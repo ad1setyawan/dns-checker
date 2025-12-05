@@ -9,9 +9,6 @@ const resolver = new Resolver();
 const domains = JSON.parse(fs.readFileSync("./config/domains.json", "utf8"));
 const domainStatus = {};
 
-// List client SSE connections
-let clients = [];
-
 // DNS resolve helper
 async function resolveDNS(domain, timeoutMs = 2000) {
     const controller = new AbortController();
@@ -31,12 +28,6 @@ async function resolveDNS(domain, timeoutMs = 2000) {
     }
 }
 
-// broadcast ke semua SSE clients
-function broadcast(event) {
-    const data = JSON.stringify(event);
-    clients.forEach(res => res.write(`data: ${data}\n\n`));
-}
-
 // checker loop per domain
 function startDomainChecker(domain, intervalMs = 5000) {
     console.log(`Starting checker for ${domain}`);
@@ -47,9 +38,6 @@ function startDomainChecker(domain, intervalMs = 5000) {
 
         // update memory
         domainStatus[domain] = result;
-
-        // kirim realtime ke SSE
-        broadcast(result);
 
         setTimeout(loop, intervalMs);
     };
@@ -67,30 +55,22 @@ app.use((req, res, next) => {
     next();
 });
 
-// SSE streaming endpoint
-app.get("/stream", (req, res) => {
-    // headers wajib untuk SSE
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+// REST API endpoints
+app.get("/api/domains", (req, res) => {
+    res.json(domainStatus);
+});
 
-    res.flushHeaders();
+app.get("/api/domains/:domain", (req, res) => {
+    const domain = req.params.domain;
+    const result = domainStatus[domain];
 
-    // Tambahkan client ke list
-    clients.push(res);
-    console.log("SSE client connected. Total:", clients.length);
-
-    // Kirim initial data
-    res.write(`data: ${JSON.stringify({ connected: true, domains })}\n\n`);
-
-    // cleanup jika koneksi terputus
-    req.on("close", () => {
-        clients = clients.filter(c => c !== res);
-        console.log("SSE client disconnected. Total:", clients.length);
-    });
+    if (result) {
+        res.json(result);
+    } else {
+        res.status(404).json({ error: "Domain not found or not yet checked" });
+    }
 });
 
 app.listen(PORT, () => {
-    console.log("DNS Monitor + SSE running on port " + PORT);
+    console.log("DNS Monitor + REST API running on port " + PORT);
 });
