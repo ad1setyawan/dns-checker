@@ -3,58 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>DNS Monitor Realtime</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f7f7f7;
-            padding: 20px;
-        }
-
-        h1 {
-            margin-bottom: 15px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        th,
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background: #fafafa;
-            font-weight: bold;
-        }
-
-        .status-ok {
-            color: #0f8b2c;
-            font-weight: bold;
-        }
-
-        .status-failed {
-            color: #c91414;
-            font-weight: bold;
-        }
-    </style>
+    <title>DNS Monitor</title>
 </head>
 
 <body>
 
     <h1>DNS Monitor</h1>
-    <div style="margin-bottom: 15px;">
-        <span id="status-indicator" style="color: #666;">⏳ Connecting...</span>
-        <span id="last-update" style="margin-left: 15px; color: #666;">Last updated: -</span>
-        <button id="refresh-btn" onclick="manualRefresh()" style="margin-left: 15px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Refresh</button>
-    </div>
 
     <table>
         <thead>
@@ -62,7 +16,7 @@
                 <th>Domain</th>
                 <th>Status</th>
                 <th>IP / Error</th>
-                <th>Waktu Cek</th>
+                <th>Time</th>
                 <th>Latency</th>
             </tr>
         </thead>
@@ -74,6 +28,18 @@
         const tableBody = document.getElementById("table-body");
         const rows = {};
 
+        // Format timestamp to client timezone
+        function formatClientTime(timestamp) {
+            if (!timestamp) return "-";
+            const date = new Date(timestamp);
+            return date.toLocaleString(); // Client's local timezone
+        }
+
+        // Format latency to 2 decimal places
+        function formatLatency(latencyMs) {
+            return latencyMs ? latencyMs.toFixed(2) : "-";
+        }
+
         function updateRow(data) {
             if (!data.domain) return;
 
@@ -82,12 +48,10 @@
 
             tr.innerHTML = `
             <td>${data.domain}</td>
-            <td class="${data.status === "ok" ? "status-ok" : "status-failed"}">
-                ${data.status.toUpperCase()}
-            </td>
+            <td>${data.status.toUpperCase()}</td>
             <td>${data.ip || data.error || "-"}</td>
-            <td>${data.checkedAt || "-"}</td>
-            <td>${data.timeMs ? data.timeMs + " ms" : "-"}</td>
+            <td>${formatClientTime(data.checkedAt)}</td>
+            <td>${formatLatency(data.timeMs)}</td>
         `;
 
             if (!tr.parentNode) {
@@ -95,111 +59,23 @@
             }
         }
 
-        let lastUpdateTime = null;
-        let pollCount = 0;
-        let errorCount = 0;
-
-        // Update status indicator
-        function updateStatus(status, color = '#666') {
-            const indicator = document.getElementById('status-indicator');
-            indicator.style.color = color;
-            indicator.textContent = status;
-        }
-
-        // Update last update time display
-        function updateLastUpdateTime(timestamp) {
-            if (timestamp) {
-                const date = new Date(timestamp);
-                const now = new Date();
-                const secondsAgo = Math.floor((now - date) / 1000);
-
-                let timeText;
-                if (secondsAgo < 60) {
-                    timeText = `${secondsAgo}s ago`;
-                } else if (secondsAgo < 3600) {
-                    timeText = `${Math.floor(secondsAgo / 60)}m ago`;
-                } else {
-                    timeText = date.toLocaleTimeString();
-                }
-
-                document.getElementById('last-update').textContent = `Last updated: ${timeText}`;
-                lastUpdateTime = timestamp;
-            }
-        }
-
         // Poll DNS status every 10 seconds (conservative approach)
         function pollDNSStatus() {
-            updateStatus('🔄 Polling...', '#007bff');
-
             fetch(`${SERVER_URL}/api/domains`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    // Update all domain rows
                     Object.values(data.data).forEach(updateRow);
-
-                    // Update status and timestamps
-                    updateStatus('✅ Connected', '#0f8b2c');
-                    updateLastUpdateTime(data.lastUpdated);
-
-                    // Reset error count on success
-                    errorCount = 0;
-                    pollCount++;
-
-                    // Log polling info occasionally
-                    if (pollCount % 10 === 0) {
-                        console.log(`✅ Successfully polled ${pollCount} times`);
-                    }
                 })
                 .catch(error => {
-                    errorCount++;
-                    console.error(`❌ Polling error (${errorCount}/5):`, error);
-
-                    // Update status with error info
-                    updateStatus(`❌ Error (${errorCount}/5)`, '#c91414');
-
-                    // If too many errors, implement exponential backoff
-                    if (errorCount >= 5) {
-                        console.warn('🚨 Too many errors, implementing backoff');
-                        clearInterval(pollInterval);
-                        const backoffTime = Math.min(30000, 10000 * Math.pow(2, errorCount - 5));
-                        setTimeout(() => {
-                            errorCount = Math.max(0, errorCount - 2);
-                            startPolling();
-                        }, backoffTime);
-                    }
+                    console.error("Polling error:", error);
                 });
         }
 
-        // Manual refresh function
-        function manualRefresh() {
-            const btn = document.getElementById('refresh-btn');
-            btn.disabled = true;
-            btn.textContent = '🔄 Refreshing...';
+        // Initial poll
+        pollDNSStatus();
 
-            pollDNSStatus();
-
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = '🔄 Refresh';
-            }, 1000);
-        }
-
-        // Start polling with 10-second interval
-        function startPolling() {
-            // Initial poll
-            pollDNSStatus();
-
-            // Set up conservative polling interval (10 seconds)
-            pollInterval = setInterval(pollDNSStatus, 10000);
-        }
-
-        let pollInterval;
-        startPolling();
+        // Set up polling interval
+        const pollInterval = setInterval(pollDNSStatus, 10000);
     </script>
 
 </body>
