@@ -53,7 +53,7 @@ async function sendDiscordNotification(domain, result, failureCount) {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     const message = {
-        content: `${DISCORD_MENTION_USERS} 🚨 **DNS Failure Alert**`,
+        content: `${DISCORD_MENTION_USERS}`,
         embeds: [{
             title: `Domain: ${domain}`,
             description: `Failed ${failureCount} consecutive DNS checks`,
