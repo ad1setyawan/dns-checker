@@ -14,6 +14,7 @@ COPY package*.json /app/
 # Copy config files
 RUN mkdir -p /app/config
 COPY config/* /app/config/
+COPY .env /app/.env
 
 # Install Node dependencies (jika tidak ada, tetap aman)
 RUN npm install || true
