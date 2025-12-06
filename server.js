@@ -10,6 +10,7 @@ const DNS_TIMEOUT_MS = parseInt(process.env.DNS_TIMEOUT_MS) || 2000;
 const CHECK_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_MS) || 3000;
 const DISCORD_FAILURE_THRESHOLD = parseInt(process.env.DISCORD_FAILURE_THRESHOLD) || 3;
 const DISCORD_ENABLED = process.env.DISCORD_ENABLED === 'true';
+const DISCORD_MENTION_USERS = process.env.DISCORD_MENTION_USERS || '@here';
 const app = express();
 const resolver = new Resolver();
 
@@ -52,7 +53,7 @@ async function sendDiscordNotification(domain, result, failureCount) {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     const message = {
-        content: `🚨 **DNS Failure Alert**`,
+        content: `${DISCORD_MENTION_USERS} 🚨 **DNS Failure Alert**`,
         embeds: [{
             title: `Domain: ${domain}`,
             description: `Failed ${failureCount} consecutive DNS checks`,
@@ -151,7 +152,7 @@ function startDomainChecker(domain, intervalMs = CHECK_INTERVAL_MS) {
 domains.forEach(d => startDomainChecker(d.trim(), CHECK_INTERVAL_MS));
 
 // middleware CORS
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
@@ -199,6 +200,7 @@ app.post("/api/test/discord", async (_req, res) => {
             message: "Test Discord notification sent successfully",
             discordEnabled: DISCORD_ENABLED,
             webhookConfigured: !!process.env.DISCORD_WEBHOOK_URL,
+            mentionUsers: DISCORD_MENTION_USERS,
             testResult: testResult
         });
     } catch (error) {
@@ -208,7 +210,8 @@ app.post("/api/test/discord", async (_req, res) => {
             message: "Test Discord notification failed",
             error: error.message,
             discordEnabled: DISCORD_ENABLED,
-            webhookConfigured: !!process.env.DISCORD_WEBHOOK_URL
+            webhookConfigured: !!process.env.DISCORD_WEBHOOK_URL,
+            mentionUsers: DISCORD_MENTION_USERS
         });
     }
 });

@@ -203,6 +203,7 @@ CHECK_INTERVAL_MS=3000                       # Domain check interval in ms (defa
 DISCORD_WEBHOOK_URL=https://discord.com/...  # Discord webhook URL for notifications
 DISCORD_FAILURE_THRESHOLD=3                 # Number of consecutive failures before notification (default: 3)
 DISCORD_ENABLED=true                         # Enable/disable Discord notifications (default: true)
+DISCORD_MENTION_USERS=@here                  # User mentions in notifications (default: @here)
 ```
 
 ### Discord Setup
@@ -220,7 +221,62 @@ To enable Discord notifications:
    DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
    DISCORD_FAILURE_THRESHOLD=3
    DISCORD_ENABLED=true
+   DISCORD_MENTION_USERS=@here
    ```
+
+   **User Mention Options**:
+   - `@here` - Mention all online users in the channel
+   - `@everyone` - Mention all users in the channel
+   - `<@USER_ID>` - Mention specific user (e.g., `<@123456789012345678>`)
+   - `<@&ROLE_ID>` - Mention specific role (e.g., `<@&987654321098765432>`)
+   - Multiple mentions: `@here <@USER_ID> <@&ROLE_ID>`
+   - Empty string: No mentions (just the alert)
+
+   **📋 How to Get User/Role IDs**:
+
+   1. **Enable Developer Mode in Discord**:
+      - Discord Settings → Advanced → Enable Developer Mode
+
+   2. **Get User ID**:
+      - Right-click on user → "Copy User ID"
+      - Hasil: `858389159555497994`
+      - Format untuk config: `<@858389159555497994>`
+
+   3. **Get Role ID**:
+      - Server Settings → Roles → Right-click on role → "Copy Role ID"
+      - Hasil: `987654321098765432`
+      - Format untuk config: `<@&987654321098765432>`
+
+   4. **Alternative: Copy Mention from Chat**:
+      - Type @username in chat → Select user → Copy the result
+      - Hasil copy: `<@858389159555497994>`
+      - Paste langsung ke config!
+
+   **🎯 Real-World Examples**:
+   ```bash
+   # Example: Mention team member John (ID: 858389159555497994)
+   DISCORD_MENTION_USERS=<@858389159555497994>
+
+   # Example: Mention DevOps team (Role ID: 111111111111111111)
+   DISCORD_MENTION_USERS=<@&111111111111111111>
+
+   # Example: Mention multiple team members
+   DISCORD_MENTION_USERS=<@858389159555497994> <@987654321098765432>
+
+   # Example: Mention online users + specific team member
+   DISCORD_MENTION_USERS=@here <@858389159555497994>
+
+   # No mentions (quiet mode)
+   DISCORD_MENTION_USERS=
+   ```
+
+   **💡 Quick Setup Method**:
+   1. Di Discord chat, ketik @nama_user dan pilih user yang mau di-mention
+   2. Copy hasil mention yang muncul (contoh: `<@858389159555497994>`)
+   3. Paste langsung ke `.env` file:
+      ```bash
+      DISCORD_MENTION_USERS=<@858389159555497994>
+      ```
 
 3. **Test Discord Configuration**:
    ```bash
@@ -256,6 +312,7 @@ All monitoring parameters are configurable via environment variables:
 - **Server Port**: `PORT` (default: 3000)
 - **Discord Threshold**: `DISCORD_FAILURE_THRESHOLD` (default: 3)
 - **Discord Enabled**: `DISCORD_ENABLED` (default: true)
+- **Discord Mentions**: `DISCORD_MENTION_USERS` (default: @here)
 
 ## 📊 Usage
 
@@ -340,6 +397,7 @@ Example response:
   "message": "Test Discord notification sent successfully",
   "discordEnabled": true,
   "webhookConfigured": true,
+  "mentionUsers": "@here",
   "testResult": {
     "domain": "test.example.com",
     "status": "failed",
@@ -354,6 +412,62 @@ This endpoint sends a simulated DNS failure notification to your Discord webhook
 - Discord notifications are enabled (`DISCORD_ENABLED=true`)
 - Webhook URL is properly configured
 - Discord webhook is accessible and working
+- User mentions are properly formatted
+
+## 🔧 Discord Mention Troubleshooting
+
+### Common Issues with Mentions
+
+#### Mentions Not Working
+- **Invalid User/Role ID**: Make sure IDs are correct numbers
+- **Missing Permissions**: Webhook needs "Mention @everyone, @here, and All Roles" permission
+- **Developer Mode**: Enable Developer Mode to copy IDs properly
+
+#### Too Many Mentions
+- **Discord Rate Limits**: Avoid mentioning too many users at once
+- **Server Restrictions**: Some servers limit @everyone/@here usage
+- **Role Permissions**: Some roles may have mention restrictions
+
+#### Best Practices
+```bash
+# ✅ Good: Specific team members (recommended)
+DISCORD_MENTION_USERS=<@858389159555497994> <@987654321098765432>
+
+# ✅ Good: Specific DevOps role (recommended)
+DISCORD_MENTION_USERS=<@&111111111111111111>
+
+# ✅ Good: Mix of role + specific users
+DISCORD_MENTION_USERS=<@&111111111111111111> <@858389159555497994>
+
+# ⚠️  Use with caution: All online users
+DISCORD_MENTION_USERS=@here
+
+# ⚠️  Use rarely: All users (can be noisy)
+DISCORD_MENTION_USERS=@everyone
+
+# ✅ Good: No mentions (quiet monitoring)
+DISCORD_MENTION_USERS=
+
+# ✅ Good: On-call team mention
+DISCORD_MENTION_USERS=<@&222222222222222222>
+```
+
+#### Real Setup Examples:
+```bash
+# Production: Mention only DevOps team
+DISCORD_MENTION_USERS=<@&111111111111111111>
+
+# Development: Mention specific developers
+DISCORD_MENTION_USERS=<@858389159555497994> <@123456789012345678>
+
+# Critical Services: Mention team + online users
+DISCORD_MENTION_USERS=<@&111111111111111111> @here
+```
+
+#### Testing Mentions
+1. Use the test endpoint to verify mention format
+2. Check Discord permissions for webhook
+3. Start with specific users before using @here/@everyone
 
 ## 🔒 Safety Considerations
 
