@@ -12,6 +12,8 @@ A simple DNS monitoring application that continuously checks DNS resolution for 
 - **Auto-refresh Dashboard**: Automatic updates every 10 seconds
 - **Spam-Safe**: Rate limited to avoid DNS server blocking
 - **Error Resilient**: Handles DNS failures and network issues gracefully
+- **Discord Notifications**: Real-time alerts for consecutive DNS failures
+- **Environment Configuration**: Flexible configuration via environment variables
 - **Simple Design**: Clean and lightweight web interface
 - **Docker Ready**: Containerized deployment with nginx reverse proxy
 - **REST API**: Standard HTTP endpoints for easy integration
@@ -59,6 +61,8 @@ dns-checker/
 │   └── supervisord.conf   # Supervisor process management
 ├── config/
 │   └── domains.json       # List of domains to monitor
+├── .env                   # Environment variables (create from .env.example)
+├── .env.example           # Example environment configuration
 ├── server.js              # Node.js/Express backend (main application)
 ├── index.html             # Frontend interface
 ├── Dockerfile             # Container build configuration
@@ -82,7 +86,31 @@ dns-checker/
    npm install
    ```
 
-3. **Configure domains to monitor**
+3. **Configure environment variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+
+   # Edit the configuration
+   nano .env
+   ```
+
+   Example `.env` configuration:
+   ```bash
+   # Server Configuration
+   PORT=3000
+
+   # DNS Configuration
+   DNS_TIMEOUT_MS=2000
+   CHECK_INTERVAL_MS=3000
+
+   # Discord Configuration
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+   DISCORD_FAILURE_THRESHOLD=3
+   DISCORD_ENABLED=true
+   ```
+
+4. **Configure domains to monitor**
    ```bash
    # Edit the domains list
    nano config/domains.json
@@ -96,7 +124,7 @@ dns-checker/
    ]
    ```
 
-4. **Start the application**
+5. **Start the application**
    ```bash
    # Start the Node.js backend
    node server.js
@@ -105,7 +133,7 @@ dns-checker/
    # Open a new terminal for frontend
    ```
 
-5. **Access the application**
+6. **Access the application**
    - Open `index.html` in your browser
    - Or serve it with a simple HTTP server:
      ```bash
@@ -159,6 +187,53 @@ docker-compose up -d
 
 ## ⚙️ Configuration
 
+### Environment Variables
+
+The application uses environment variables for configuration. Copy `.env.example` to `.env` and modify as needed:
+
+```bash
+# Server Configuration
+PORT=3000                                    # Server port (default: 3000)
+
+# DNS Configuration
+DNS_TIMEOUT_MS=2000                          # DNS resolution timeout in ms (default: 2000)
+CHECK_INTERVAL_MS=3000                       # Domain check interval in ms (default: 3000)
+
+# Discord Configuration
+DISCORD_WEBHOOK_URL=https://discord.com/...  # Discord webhook URL for notifications
+DISCORD_FAILURE_THRESHOLD=3                 # Number of consecutive failures before notification (default: 3)
+DISCORD_ENABLED=true                         # Enable/disable Discord notifications (default: true)
+```
+
+### Discord Setup
+
+To enable Discord notifications:
+
+1. **Create a Discord Webhook**:
+   - Go to your Discord server settings
+   - Navigate to "Integrations" → "Webhooks"
+   - Create a new webhook and copy the URL
+
+2. **Configure Environment Variables**:
+   ```bash
+   # In your .env file
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+   DISCORD_FAILURE_THRESHOLD=3
+   DISCORD_ENABLED=true
+   ```
+
+3. **Test Discord Configuration**:
+   ```bash
+   # Test your Discord webhook setup
+   curl -X POST http://localhost:3000/api/test/discord
+   ```
+
+4. **Notification Behavior**:
+   - Sends notification after 3 consecutive DNS failures
+   - No further notifications until domain has successful resolution
+   - Resets failure counter after successful DNS resolution
+   - Includes domain name, error details, and failure count in notification
+
 ### Domain Monitoring
 
 Edit `config/domains.json` to specify which domains to monitor:
@@ -172,20 +247,15 @@ Edit `config/domains.json` to specify which domains to monitor:
 ]
 ```
 
-### Monitoring Parameters
+### Advanced Configuration
 
-You can modify these parameters in `server.js`:
+All monitoring parameters are configurable via environment variables:
 
-- **Check Interval**: Default 5000ms (5 seconds)
-- **DNS Timeout**: Default 2000ms (2 seconds)
-- **Server Port**: Default 3000 (internal), 80 (external via nginx)
-
-To modify:
-```javascript
-// In server.js, find these lines:
-const intervalMs = 5000;  // Change check frequency
-const timeoutMs = 2000;   // Change DNS timeout
-```
+- **Check Interval**: `CHECK_INTERVAL_MS` (default: 3000ms)
+- **DNS Timeout**: `DNS_TIMEOUT_MS` (default: 2000ms)
+- **Server Port**: `PORT` (default: 3000)
+- **Discord Threshold**: `DISCORD_FAILURE_THRESHOLD` (default: 3)
+- **Discord Enabled**: `DISCORD_ENABLED` (default: true)
 
 ## 📊 Usage
 
@@ -247,9 +317,43 @@ Example response:
   "ip": "142.250.191.14",
   "timeMs": 45.2,
   "checkedAt": "2024-01-15T10:30:00.000Z",
-  "errorCode": null
+  "errorCode": null,
+  "consecutiveFailures": 0,
+  "notificationSent": false
 }
 ```
+
+#### Test Discord Notification
+- **Endpoint**: `/api/test/discord`
+- **Method**: POST
+- **Purpose**: Send test notification to Discord to verify webhook configuration
+
+Example request:
+```bash
+curl -X POST http://localhost:3000/api/test/discord
+```
+
+Example response:
+```json
+{
+  "success": true,
+  "message": "Test Discord notification sent successfully",
+  "discordEnabled": true,
+  "webhookConfigured": true,
+  "testResult": {
+    "domain": "test.example.com",
+    "status": "failed",
+    "error": "Test DNS failure - This is a test notification",
+    "errorCode": "ENOTFOUND",
+    "checkedAt": "2024-01-15T10:30:00.000Z"
+  }
+}
+```
+
+This endpoint sends a simulated DNS failure notification to your Discord webhook to verify that:
+- Discord notifications are enabled (`DISCORD_ENABLED=true`)
+- Webhook URL is properly configured
+- Discord webhook is accessible and working
 
 ## 🔒 Safety Considerations
 
