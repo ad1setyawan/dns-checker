@@ -1,4 +1,5 @@
 [
   "client.kiriminaja.com",
-  "multichannel.qiscus.com"
+  "multichannel.qiscus.com",
+  "fcm.googleapis.com",
 ]
